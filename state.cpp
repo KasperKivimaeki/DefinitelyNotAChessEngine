@@ -8,13 +8,14 @@ int State::Run() {
     BB moveSquares[64] = {};
 
     BB color = plies % 2 ? bpieces : wpieces;
+    BB them = plies % 2 ? wpieces : bpieces;
 
     BB hknights = knights & color;
     BB hbishops = bishops & color;
     BB hkings   = kings   & color;
     BB hrooks   = rooks   & color;
     BB hpawns   = pawns   & color;
-    BB pieces = color | bpieces;
+    BB pieces = wpieces | bpieces;
 
     Piece pawn = plies % 2 ? BPAWN : WPAWN;
 
@@ -29,7 +30,7 @@ int State::Run() {
         if (hknights & i)      ends |= b->attacks(sq, KNIGHT, occ);
         if (hbishops & i)      ends |= b->attacks(sq, BISHOP, occ);
         if (hrooks & i)        ends |= b->attacks(sq, ROOK, occ);
-        else if (hpawns & i)   ends |= b->attacks(sq, pawn, occ);
+        else if (hpawns & i)   ends |= (b->attacks(sq, pawn, occ) & them) | b->moves(sq, pawn, occ);
         else if (hkings & i)   ends |= b->attacks(sq, KING, occ);
 
         ends &= ~color;
@@ -41,6 +42,8 @@ int State::Run() {
     for(int i = 0; i < 64; i++) n += b->popCount(moveSquares[i]);
 
     next = (State **)malloc(n * sizeof(State *));
+    fromS = new int[n];
+      toS = new int[n];
     int it = 0;
 
     for (int src = 0; src < 64; src++) {
@@ -49,11 +52,17 @@ int State::Run() {
             BB dstq = ((BB)1) << dst;
             if(!(moveSquares[src] & dstq)) continue;
             State *sn = new State(*this);
-            sn->move(((BB)1) << src, ((BB)1) << dst);
-            next[it++] = sn;
+            if(sn->move(((BB)1) << src, ((BB)1) << dst)) {
+                delete sn; // Move was illegal
+            } else {
+                fromS[it] = src;
+                toS  [it] = dst;
+                next [it] = sn;
+                it++;
+            }
         }
     }
-    next_n = n;
+    next_n = it;
 
     return n;
 }
@@ -117,6 +126,10 @@ void State::Change(const char* FEN) {
     }
 }
 
+Piece State::getPiece(int sq) {
+    return getPiece(((BB)1) << sq);
+}
+
 Piece State::getPiece(BB sq) {
     if (knights & sq) return KNIGHT;
     else if (rooks & bishops & sq) return QUEEN;
@@ -128,7 +141,8 @@ Piece State::getPiece(BB sq) {
     return EMPTY;
 }
 
-void State::move(BB src, BB dst) {
+// Returns true, if move was illegal
+bool State::move(BB src, BB dst) {
     Piece p = getPiece(src);
     BB inv_src = ~src;
     BB inv_dst = ~dst;
@@ -166,7 +180,10 @@ void State::move(BB src, BB dst) {
             pawns   = pawns   & inv_src | dst;
             break;
     }
+    bool x = isCheck();
     plies += 1;
+
+    return x;
 }
 
 bool State::isCheck() {
@@ -186,4 +203,19 @@ bool State::isCheck() {
         pawnChecks =    pawns & b->attacks(kbit, WPAWN,  pieces);
 
     return ~color & (knightChecks | bishopChecks | rookChecks | pawnChecks);
+}
+
+int State::colorOf(int sq) {
+    return 1 && (wpieces & (((BB)1) << sq));
+}
+
+int State::TotalMoves(int d) {
+    if (d == 0) return 0;
+    if (next_n == -1) Run();
+    if (d == 1) return next_n;
+    int total = 0;
+    for(int i = 1; i < next_n; i++) {
+        total += TotalMoves(d - 1);
+    }
+    return total;
 }

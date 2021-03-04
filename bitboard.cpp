@@ -242,6 +242,15 @@ BB BitBoards::attacks(int sq, Piece p, BB occ) {
         return CaptureTable[p][sq];
 }
 
+BB BitBoards::moves(int sq, Piece p, BB occ) {
+    if (p == WPAWN) 
+        return rookAtt[sq][((occ & SlidingTable[p][sq])*rmagics[sq]) >> (64 - rsn[sq])] & SlidingTable[p][sq] & ~occ;
+    else if (p == BPAWN) 
+        return rookAtt[sq][((occ & SlidingTable[p][sq])*rmagics[sq]) >> (64 - rsn[sq])] & SlidingTable[p][sq] & ~occ;
+    else 
+        return attacks(sq, p, occ);
+}
+
 BB BitBoards::slowRookSolve(int sq, BB mask) {
     int r = 7 - sq / 8;
     int f = sq % 8;

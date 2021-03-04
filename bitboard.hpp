@@ -82,6 +82,7 @@ public:
     BB SlidingTable[8][64];
 
     BB attacks(int sq, Piece p, BB occ);
+    BB moves  (int sq, Piece p, BB occ);
     void genAttTables();
 private:
     unsigned char popCountOfByte256[256];

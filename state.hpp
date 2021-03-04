@@ -55,20 +55,27 @@ public:
 
     void PrintGame();
     int Run();
+    int TotalMoves(int);
     void Change(const char*);
 
     State **next;
-    int next_n;
+    int next_n = -1;
     bool isCheck();
 
+    int *fromS;
+    int *toS;
+
+    int plies = 0;
+
+    int colorOf(int sq);
+
+    Piece getPiece(int sq);
 private:
-    void move(BB src, BB dst);
+    bool move(BB src, BB dst);
 
     Piece getPiece(BB sq);
 
     BitBoards *b;
-
-    int plies = 0;
 
     BB wpieces = 0;
     BB bpieces = 0;
